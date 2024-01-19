@@ -1,10 +1,11 @@
 import uasyncio
 import time
 import utime
+import random
 
 # Timing
-actualTime = 15000 # ms
-actualValue = 255 # DMX-Value
+actualTime = 0 # ms
+actualValue = 0 # DMX-Value
 
 # Curtain Constants
 openTime = 15000 #ms
@@ -20,14 +21,33 @@ async def get_user_input():
     print("--- DMX-Value: ---")
     return await loop.run_in_executor(None, input)
 
+activeTasks = []
+
+async def randomDelayAndValue():
+    i = 0
+    while True:    
+        newValue = int(random.random() * 255)
+        delay = int(random.random() * 1000)
+        print("-----------------------")
+        print("DELAY ", i, ": " + str(delay) + "ms -> ", newValue)
+        print("-----------------------")
+        await uasyncio.sleep_ms(3000)
+        loop = uasyncio.get_event_loop()
+        loop.create_task(setCurtainValue(newValue))
+        #activeTasks.insert(newTask)
+        i = i+1
+
+
 async def main():
+    uasyncio.create_task(randomDelayAndValue())
+
     #while True:
-    dmxValue = input("DMX-Value:")
+    #dmxValue = input("DMX-Value:")
     #dmxValue2 = input("DMX Val 2:")
     #dmxValue3 = input("DMX Val 3:")
-    task = setCurtainValue(int(dmxValue))
-    await uasyncio.sleep(5)
-    print("AFTER")
+    #task = setCurtainValue(int(dmxValue))
+    #await uasyncio.sleep(5)
+    #print("AFTER")
     #await uasyncio.sleep(5)
     #uasyncio.create_task(setCurtainValue(255))
     #await uasyncio.sleep(3000)
@@ -35,24 +55,6 @@ async def main():
     #setCurtainValue(int(dmxValue2))
     #await uasyncio.sleep(5)
     #setCurtainValue(int(dmxValue3))
-
-    """ while True:
-        
-        dmxValue = await get_user_input()
-        print(f"Received DMX-Value: {dmxValue}")
-        setCurtainValue(int(dmxValue))
-        dmxValue = await get_user_input()
-        print(f"Received DMX-Value: {dmxValue}")
-        setCurtainValue(int(dmxValue)) """
-    
-    # duration 15s
-    """ uasyncio.create_task(setCurtainValue(255))
-    print("AFTER START")
-    await uasyncio.sleep(1)
-    print("AFTER DELAY")
-    uasyncio.create_task(setCurtainValue(100))
-    await uasyncio.sleep(1000)
-    print("AFTER 2nd run") """
 
 async def openCurtainTask(deltaTime, newValue):
     global actualTime
@@ -142,9 +144,9 @@ async def closeCurtainTask(deltaTime, newValue):
             # Führe deine Aktionen hier aus
             last_time = utime.ticks_add(last_time, interval)
             #actualTime = max(actualTime - interval, 0)
-            actualTime = actualTime - 1;
+            actualTime = actualTime - 1
             #print(last_time)
-            deltaTime = deltaTime - interval;
+            deltaTime = deltaTime - interval
             #print(actualTime, deltaTime)
             if deltaTime <= 0:
                 break
@@ -165,7 +167,7 @@ async def closeCurtainTask(deltaTime, newValue):
 
     print("RELEASE CLOSE: Calculated DMX Value:", actualTime / openTime * 255)
 
-def setCurtainValue(newValue):
+async def setCurtainValue(newValue):
     print("----- setCurtainValue ------")
     global movingTask
     global actualValue
@@ -206,6 +208,6 @@ def stopMovingTask():
     print("RELEASE ALL BTNs")
 
 if __name__ == "__main__":
-    uasyncio.run(main())
+    uasyncio.run(randomDelayAndValue())
 
 
