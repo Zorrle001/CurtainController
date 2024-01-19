@@ -3,6 +3,7 @@ import time
 import utime
 import random
 import _thread
+from machine import Pin
 
 # Timing
 actualTime = 0 # ms
@@ -23,7 +24,7 @@ threadRunning = False
 # IF OPENING AND THEN CREATES NEW TASK VOR OPENING SERVO IS RELEASED AND AGAIN PRESSED -> SHUTTERING
 
 lastPercentage = "0%"
-def progressBar(prefix = 'Curtain: ', suffix = 'Opened', decimals = 1, length = 20, fill = '#', printEnd = "\r", value = 0):
+def progressBar(prefix = 'Curtain: ', suffix = 'Closed', decimals = 1, length = 20, fill = '#', printEnd = "\r", value = 0):
     """
     Call in a loop to create terminal progress bar
     @params:
@@ -46,7 +47,7 @@ def progressBar(prefix = 'Curtain: ', suffix = 'Opened', decimals = 1, length = 
             return False
         filledLength = int(length * iteration // total)
         bar = fill * filledLength + '-' * (length - filledLength)
-        print(f'\r{prefix} |{bar}| {percent}% {suffix}', end = printEnd)
+        print(f'\r{prefix} |{bar}| {percent}% {suffix} -> {iteration / 15000 * 255}', end = printEnd)
         lastPercentage = percent
         return True
     
@@ -67,7 +68,7 @@ async def randomDelayAndValueLoop():
     i = 0
     while True:    
         newValue = int(random.random() * 255)
-        delay = int(random.random() * 10000)
+        delay = int(random.random() * 0) + 6
         print("-----------------------")
         print("DELAY ", i, ": " + str(delay) + "ms -> ", newValue)
         print("-----------------------")
@@ -126,6 +127,9 @@ def openCurtainThread(deltaTime, newValue):
 
     print("openCurtain", actualTime, min(actualTime + deltaTime, openTime), (min(actualTime + deltaTime, openTime) - actualTime) / 1000, "s")
     print("PRESS OPEN")
+
+    openLED = Pin(20, Pin.OUT)
+    openLED.value(1)
     
     while True:
 
@@ -152,6 +156,7 @@ def openCurtainThread(deltaTime, newValue):
     # no buffering
     print("RELEASE OPEN: Calculated DMX Value:", actualTime / openTime * 255)
     threadRunning = False
+    openLED.value(0)
 
 async def closeCurtainAsync(deltaTime, newValue):
     global threadRunning
@@ -179,6 +184,9 @@ def closeCurtainThread(deltaTime, newValue):
     print("closeCurtain", actualTime, max(actualTime - deltaTime, 0), (max(actualTime - deltaTime, 0) + actualTime), "s")
     print("PRESS CLOSE")
 
+    closeLED = Pin(10, Pin.OUT)
+    closeLED.value(1)
+
     while True:
 
         if killThread == True:
@@ -202,6 +210,7 @@ def closeCurtainThread(deltaTime, newValue):
     # no buffering
     print("RELEASE CLOSE: Calculated DMX Value:", actualTime / openTime * 255)
     threadRunning = False
+    closeLED.value(0)
 
 async def stopThread():
     global killThread
@@ -209,6 +218,11 @@ async def stopThread():
     if threadRunning == False:
         print("THREAD NOT RUNNING")
         return
+    
+    openLED = Pin(20, Pin.OUT)
+    openLED.value(0)
+    closeLED = Pin(10, Pin.OUT)
+    closeLED.value(0)
     
     print("STOP THREAD")
     
