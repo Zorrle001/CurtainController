@@ -4,7 +4,7 @@ tx_pin = Pin(4, Pin.OUT)
 rx_pin = Pin(5, Pin.IN)
 uart = UART(1, baudrate=250000, rx=rx_pin)
 
-def receiveDMXChannels(channels):
+def receiveDMXChannels(channel):
     while True:    
         pre_dmx_data = uart.read()
         while uart.any() == 0:
@@ -16,9 +16,7 @@ def receiveDMXChannels(channels):
             
         for i in range(len(dataArray[2:])):
             channelValue = dataArray[2:][i]
-            if(i == 0):
-                print(channelValue)
-            
-            #print(i + 1, channelValue)
+            if(i == channel):
+                print(channel + 1, ". ->", channelValue)
 
-receiveDMXChannels([1, 3])
+receiveDMXChannels()

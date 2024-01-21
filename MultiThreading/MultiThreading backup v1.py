@@ -3,14 +3,14 @@ import time
 import utime
 import random
 import _thread
-from machine import Pin, UART
+from machine import Pin
 
 # Timing
 actualTime = 0 # ms
 actualValue = 0 # DMX-Value
 
 # Curtain Constants
-openTime = 5000 #ms
+openTime = 15000 #ms
 buffer = 0.1 # -> 10%
 bufferedOpenTime = openTime + openTime * buffer
 
@@ -21,18 +21,10 @@ movingTask = None
 killThread = False
 threadRunning = False
 
-# LEDs
-lockLED = Pin(17, Pin.OUT)
-
-# BUTTONS
-openButton = machine.Pin(19, machine.Pin.IN, machine.Pin.PULL_DOWN)
-closeButton = machine.Pin(18, machine.Pin.IN, machine.Pin.PULL_DOWN)
-
 # IF OPENING AND THEN CREATES NEW TASK VOR OPENING SERVO IS RELEASED AND AGAIN PRESSED -> SHUTTERING
 
 lastPercentage = "0%"
 def progressBar(prefix = 'Curtain: ', suffix = 'Closed', decimals = 1, length = 20, fill = '#', printEnd = "\r", value = 0):
-    global openTime
     """
     Call in a loop to create terminal progress bar
     @params:
@@ -45,7 +37,9 @@ def progressBar(prefix = 'Curtain: ', suffix = 'Closed', decimals = 1, length = 
         printEnd    - Optional  : end character (e.g. "\r", "\r\n") (Str)
     """
 
-    total = openTime
+    total = 15000
+
+    return
 
     # Progress Bar Printing Function
     def printProgressBar (iteration):
@@ -55,7 +49,7 @@ def progressBar(prefix = 'Curtain: ', suffix = 'Closed', decimals = 1, length = 
             return False
         filledLength = int(length * iteration // total)
         bar = fill * filledLength + '-' * (length - filledLength)
-        print(f'\r{prefix} |{bar}| {percent}% {suffix} -> {iteration / total * 255}', end = printEnd)
+        print(f'\r{prefix} |{bar}| {percent}% {suffix} -> {iteration / 15000 * 255}', end = printEnd)
         lastPercentage = percent
         return True
     
@@ -64,63 +58,16 @@ def progressBar(prefix = 'Curtain: ', suffix = 'Closed', decimals = 1, length = 
     # Print New Line on Complete
         print()
 
-tx_pin = Pin(4, Pin.OUT)
-rx_pin = Pin(5, Pin.IN)
-uart = UART(1, baudrate=250000, rx=rx_pin)
+async def get_user_input():
+    loop = uasyncio.get_event_loop()
+    print("--- DMX-Value: ---")
+    return await loop.run_in_executor(None, input)
 
-localOverride = False
-lastValue = None
-lockButtons = False
-
-async def receiveDMXChannels(channel):
-    global lastValue
-    global localOverride
-    global lockButtons
-
-    pre_dmx_data = uart.read()
-    while True:  
-
-        
-
-        while uart.any() == 0:
-            pass
-        dmx_data = uart.read()
-        ### print("PRE", dmx_data[0], len(dmx_data))
-        
-        dataArray = bytearray(dmx_data)
-            
-        for i in range(len(dataArray[2:])):
-            channelValue = dataArray[2:][i]
-            if(i == channel):
-                if(lockButtons == False):
-                    if openButton.value() == 1:
-                        localOverride = True
-                        await setCurtainValue(255)
-                    
-                        continue
-                    elif closeButton.value() == 1:
-                        localOverride = True
-                        await setCurtainValue(0)
-                        continue
-
-                if (lastValue == None or lastValue != channelValue):
-                    localOverride = False
-                    print(channel + 1, ". ->", channelValue)
-                    await setCurtainValue(channelValue)
-                    lastValue = channelValue
-            elif(i == channel + 1):
-                if(channelValue > 127):
-                    lockButtons = True
-                    lockLED.value(1)
-                    lastValue = None
-                else:
-                    lockButtons = False
-                    lockLED.value(0)
-        uasyncio.sleep_ms(10)
+activeTasks = []
 
 # DMX Loop
 async def randomDelayAndValueLoop():
-    i = 0
+    """ i = 0
     while True:    
         newValue = int(random.random() * 255)
         delay = int(random.random() * 15000)
@@ -131,8 +78,11 @@ async def randomDelayAndValueLoop():
         await uasyncio.sleep_ms(delay)
         await setCurtainValue(newValue)
 
-        i = i + 1
+        i = i + 1 """
     
+    await setCurtainValue(255)
+    await uasyncio.sleep(1000)
+
     """ i = 0
     while True:
         # Hier implementieren Sie Ihre DMX-Logik
@@ -312,8 +262,7 @@ async def setCurtainValue(newValue):
 
         #stopMovingTask()
         #movingTask = uasyncio.create_task(openCurtainTask(deltaTime, newValue))
-        #uasyncio.create_task(openCurtainAsync(deltaTime, newValue))
-        await openCurtainAsync(deltaTime, newValue)
+        uasyncio.create_task(openCurtainAsync(deltaTime, newValue))
     else:
         # close 
         print("- CLOSE")
@@ -321,8 +270,7 @@ async def setCurtainValue(newValue):
 
         #stopMovingTask()
         #movingTask = uasyncio.create_task(closeCurtainTask(deltaTime, newValue))
-        #uasyncio.create_task(closeCurtainAsync(deltaTime, newValue))
-        await closeCurtainAsync(deltaTime, newValue)
+        uasyncio.create_task(closeCurtainAsync(deltaTime, newValue))
    
     actualValue = newValue
 
@@ -335,7 +283,7 @@ def stopMovingTask():
 
 # Starten Sie die Aufgaben
 loop = uasyncio.get_event_loop()
-loop.create_task(receiveDMXChannels(0))
+loop.create_task(randomDelayAndValueLoop())
 
 # Führen Sie die Schleifen aus
 loop.run_forever()
