@@ -288,17 +288,30 @@ async def stopThread():
     await uasyncio.sleep_ms(1)
     return
 
+nullCount = 0
+
 async def setCurtainValue(newValue):
     print("----- setCurtainValue ------")
     global movingTask
     global actualValue
     global openTime
+    global nullCount
+
+    # REMOVE 0 BUG
+    if(newValue == 0 and nullCount < 3):
+        nullCount = nullCount + 1
+        return
+    else:
+        if actualValue != 0:
+            nullCount = 0
+    
 
     if(actualValue == newValue):
         print("SMAME VALUE RETURN")
         return
     
     newTime = (newValue / 255) * openTime
+
     if(actualTime == newTime):
         # stop
         print("- STOP")
